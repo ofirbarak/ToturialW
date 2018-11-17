@@ -96,14 +96,14 @@ def encoder(images, bs):
     trans = False
     layer_buffers = []
 
-    buffers, loc = conv(INPUT_SIZE, NLAYER_SIZES[0], buffers, kernels[0], encbiases[0],
+    buffers, loc = conv(INPUT_SIZE, NLAYER_SIZES[0], buffers, None, kernels[0], encbiases[0],
                    STRIDE[0], WINDOW[0], trans, K[0], 'Enc' + str(0))
-    layer_buffers.append(buffers)
+    # layer_buffers.append(buffers)
     # print('endcoder second layer')
     for i in range(1, NUM_LAYERS):
-        buffers, loc1 = conv(NLAYER_SIZES[i-1], NLAYER_SIZES[i], buffers, kernels[i], encbiases[i],
+        buffers, loc1 = conv(NLAYER_SIZES[i-1], NLAYER_SIZES[i], buffers, None, kernels[i], encbiases[i],
                        STRIDE[i], WINDOW[i], trans, K[i], 'Enc'+str(i))
-        layer_buffers.append(buffers)
+        # layer_buffers.append(buffers)
 
     return buffers, [loc, loc1]
 
@@ -113,14 +113,14 @@ def decoder(foward_buffers):
     zbuffers, locs = foward_buffers
 
     for i in range(NUM_LAYERS-1, 0, -1):
-        zbuffers, _ = conv(NLAYER_SIZES[i], NLAYER_SIZES[i-1], zbuffers, kernels[i], decbiases[i],
+        zbuffers, _ = conv(NLAYER_SIZES[i], NLAYER_SIZES[i-1], zbuffers, locs[i], kernels[i], decbiases[i],
                         STRIDE[i], WINDOW[i], trans, K[i-1], 'Dec'+str(i))
 
         # replace buf_loc to forward buf_loc from encoder
-        for j in range(batch_size):
-            zbuffers[j] = (zbuffers[j][0], zbuffers[j][1], locs[0])
+        # for j in range(batch_size):
+        #     zbuffers[j] = (zbuffers[j][0], zbuffers[j][1], foward_buffers[i-1][j][2])
     # print('decoder first layer')
-    zbuffers, _ = conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers, kernels[0], decbiases[0],
+    zbuffers, _ = conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers, locs[0], kernels[0], decbiases[0],
                    STRIDE[0], WINDOW[0], trans, INPUT_CH, 'Dec0')
 
     with tf.name_scope('reconstruct'):
@@ -211,15 +211,15 @@ def trainAE(images, lr=LEARNING_RATE, iterations=ITERATION):
 
             if it % 30 == 0:
                 # ################################
-                # bufs, locations, bufs1, I1, I2, loc, loc1 = sess.run(encoder(batch, batch_size))
-                # image, _, bufs2, zloc, zloc1 = sess.run(decoder((bufs, locations, bufs1, _, _)))
+                # bufs = sess.run(encoder(batch, batch_size))
+                # image = sess.run(decoder(bufs))
                 #
                 #
                 # # image, _ = sess.run(reconstruct_batch(bufs, 0, 3))
                 # # (nbufs, image2) = sess.run(conv(NLAYER_SIZES[0], NLAYER_SIZES[1], bufs, kernels[1], encbiases[1],
                 # #                                 STRIDE[1], WINDOW[1], True, 3, 'h'))
                 # # image = sess.run(reconstruct_batch(bufs, 0, 3))[0]
-                # image2 = sess.run(reconstruct_batch(bufs1, 0, 1))
+                # # image2 = sess.run(reconstruct_batch(bufs1, 0, 1))
                 # # print(images[0,:,:,0])
                 # # print(resp)
                 # # image = sess.run(unpool(reconstruct_batch(bufs, 0, 3), bufs[-1], INPUT_SIZE))

@@ -340,6 +340,7 @@ def conv(prev_size, next_size, old_buffers, locs, kernels, biases, stride, windo
             c_i, c_o = c_o, c_i
 
         # convolve
+
         resp_loc = None
         for j in range(0, c_o, M_O):
             batch_image_size = next_size if trans else prev_size

@@ -94,34 +94,34 @@ def encoder(images, bs):
         buffers = copy_batch_to_buffers(images, bs)
 
     trans = False
-    layer_buffers = []
+    locs = []
 
     buffers, loc, resp, I = conv(INPUT_SIZE, NLAYER_SIZES[0], buffers, None, kernels[0], encbiases[0],
                    STRIDE[0], WINDOW[0], trans, K[0], 'Enc' + str(0))
-    # layer_buffers.append(buffers)
-    # print('endcoder second layer')
-    for i in range(1, NUM_LAYERS):
-        buffers, loc1, _ = conv(NLAYER_SIZES[i-1], NLAYER_SIZES[i], buffers, None, kernels[i], encbiases[i],
-                       STRIDE[i], WINDOW[i], trans, K[i], 'Enc'+str(i))
-        # layer_buffers.append(buffers)
+    locs.append(buffers[0][2])
 
-    return buffers, [loc], resp, I
+    for i in range(1, NUM_LAYERS):
+        buffers, loc, _, _ = conv(NLAYER_SIZES[i-1], NLAYER_SIZES[i], buffers, None, kernels[i], encbiases[i],
+                       STRIDE[i], WINDOW[i], trans, K[i], 'Enc'+str(i))
+        locs.append(buffers[0][2])
+
+
+    return buffers, locs, resp, I
 
 
 def decoder(foward_buffers):
-
     trans = True
     zbuffers, locs,_,_ = foward_buffers
 
     for i in range(NUM_LAYERS-1, 0, -1):
-        zbuffers, _, _ = conv(NLAYER_SIZES[i], NLAYER_SIZES[i-1], zbuffers, locs[i], kernels[i], decbiases[i],
+        zbuffers, _, _,_ = conv(NLAYER_SIZES[i], NLAYER_SIZES[i-1], zbuffers, locs[i], kernels[i], decbiases[i],
                         STRIDE[i], WINDOW[i], trans, K[i-1], 'Dec'+str(i))
 
         # replace buf_loc to forward buf_loc from encoder
         # for j in range(batch_size):
         #     zbuffers[j] = (zbuffers[j][0], zbuffers[j][1], foward_buffers[i-1][j][2])
     # print('decoder first layer')
-    zbuffers, resp1, _, I = conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers, locs[0], kernels[0], decbiases[0],
+    zbuffers, resp1, _, I = conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers, zbuffers[0][2], kernels[0], decbiases[0],
                    STRIDE[0], WINDOW[0], trans, INPUT_CH, 'Dec0')
 
     with tf.name_scope('reconstruct'):

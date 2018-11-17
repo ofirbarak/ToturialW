@@ -388,7 +388,7 @@ def conv(prev_size, next_size, old_buffers, locs, kernels, biases, stride, windo
                     I, locations = reconstruct_batch(old_buffers, i, size)
 
                     if trans:
-                        I = unpool(I, locs, next_size)
+                        I = unpool(I, locations, next_size)
                         # print('I size', I)
                         conv_result = regular_conv(I, kernels[:, :, j:j + M_O, i:i + size], biases[j:j + M_O],
                                                    1, batch_size, trans, next_size)
@@ -405,7 +405,7 @@ def conv(prev_size, next_size, old_buffers, locs, kernels, biases, stride, windo
             with tf.name_scope('acti_%dT%d' % (j, j+M_O)):
                 resp_loc = tf.zeros(batch_resp_size, dtype=tf.int32)
                 if not trans:
-                    # batch_responses = tf.nn.relu(batch_responses)
+                    batch_responses = tf.nn.relu(batch_responses)
                     batch_responses, resp_loc = get_maxpool_argmax(batch_responses, window, stride)
 
             # update buffers

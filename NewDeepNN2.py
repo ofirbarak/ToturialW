@@ -1,6 +1,6 @@
 from AEconstants import *
 
-K = [4, 4]  # sparse size
+K = [3, 3]  # sparse size
 M_O = 4  # output batch size, assume LAYERS modulo M_O = 0
 M_I = 4  # input batch size
 
@@ -340,7 +340,6 @@ def conv(prev_size, next_size, old_buffers, locs, kernels, biases, stride, windo
             c_i, c_o = c_o, c_i
 
         # convolve
-        resp_loc = None
         for j in range(0, c_o, M_O):
             batch_image_size = next_size if trans else prev_size
             batch_resp_size = [batch_size] + batch_image_size + [min(M_O, c_o - j)]
@@ -377,7 +376,7 @@ def conv(prev_size, next_size, old_buffers, locs, kernels, biases, stride, windo
             with tf.name_scope('updBufs_%dT%d' % (j, j+M_O)):
                 new_buffers = update_buffers(new_buffers, batch_responses, resp_loc, j, k)
 
-        return new_buffers, resp_loc
+        return new_buffers
 
 
 def copy_image_to_buffers(image):

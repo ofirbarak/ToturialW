@@ -327,11 +327,11 @@ def conv(prev_size, next_size, old_buffers, locs, kernels, biases, stride, windo
         new_buffers = []
         new_buffers_size = next_size #if trans else prev_size
         for i in range(batch_size):
-            buf_val = [tf.zeros(new_buffers_size) for _ in range(k)]
+            buf_val = [tf.zeros(new_buffers_size)-10 for _ in range(k)]
             buf_ind = [tf.zeros(new_buffers_size, dtype=tf.int32) for _ in range(k)]
-            buf_loc = [tf.reshape(tf.range(new_buffers_size[0]*new_buffers_size[1], dtype=tf.int32),
-                                  new_buffers_size) for _ in range(k)]
-            # buf_loc = [tf.ones(new_buffers_size, dtype=tf.int32) for _ in range(k)]
+            # buf_loc = [tf.reshape(tf.range(new_buffers_size[0]*new_buffers_size[1], dtype=tf.int32),
+            #                       new_buffers_size) for _ in range(k)]
+            buf_loc = [tf.ones(new_buffers_size, dtype=tf.int32) for _ in range(k)]
             new_buffers.append((buf_val, buf_ind, buf_loc))
 
         # determine the input and output channels for conv operation
@@ -371,14 +371,14 @@ def conv(prev_size, next_size, old_buffers, locs, kernels, biases, stride, windo
             with tf.name_scope('acti_%dT%d' % (j, j+M_O)):
                 resp_loc = tf.zeros(batch_resp_size, dtype=tf.int32)
                 if not trans:
-                    batch_responses = tf.nn.relu(batch_responses)
+                    # batch_responses = tf.nn.relu(batch_responses)
                     batch_responses, resp_loc = get_maxpool_argmax(batch_responses, window, stride)
 
             # update buffers
             with tf.name_scope('updBufs_%dT%d' % (j, j+M_O)):
                 new_buffers = update_buffers(new_buffers, batch_responses, resp_loc, j, k)
 
-        return new_buffers, resp_loc
+        return new_buffers, resp_loc, batch_responses
 
 
 def copy_image_to_buffers(image):

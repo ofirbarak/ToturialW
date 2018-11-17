@@ -227,19 +227,19 @@ def unpool(I, locations, size):
     input_shape = I.get_shape().as_list()
     batch = []
     for ind in range(input_shape[0]):
-        # flatten_argmax = tf.reshape(locations[ind], [-1,1])
-        # flatten_maxval = tf.reshape(I[ind], [-1])
-        flatten_argmax = []
-        flatten_maxval = []
-        for ch in range(input_shape[-1]):
-            flatten_argmax.append(tf.reshape(locations[ind,:,:,ch], [-1]))
-            flatten_maxval.append(tf.reshape(I[ind,:,:,ch], [-1]))
-        tensor_argmax = tf.stack(flatten_argmax, 0)
-        tensor_maxval = tf.stack(flatten_maxval, 0)
-        print(tensor_argmax, tensor_maxval)
-        flatten_argmax = tf.reshape(tensor_argmax, [-1,1])
-        flatten_maxval = tf.reshape(tensor_maxval, [-1])
-        print(flatten_argmax, flatten_maxval)
+        flatten_argmax = tf.reshape(locations[ind], [-1,1])
+        flatten_maxval = tf.reshape(I[ind], [-1])
+        # flatten_argmax = []
+        # flatten_maxval = []
+        # for ch in range(input_shape[-1]):
+        #     flatten_argmax.append(tf.reshape(locations[ind,:,:,ch], [-1]))
+        #     flatten_maxval.append(tf.reshape(I[ind,:,:,ch], [-1]))
+        # tensor_argmax = tf.stack(flatten_argmax, 0)
+        # tensor_maxval = tf.stack(flatten_maxval, 0)
+        # print(tensor_argmax, tensor_maxval)
+        # flatten_argmax = tf.reshape(tensor_argmax, [-1,1])
+        # flatten_maxval = tf.reshape(tensor_maxval, [-1])
+        # print(flatten_argmax, flatten_maxval)
 
         # print(flatten_argmax, flatten_maxval, I)
         sh = tf.constant([1 * int(size[0]) * int(size[1]) * input_shape[-1]], dtype=flatten_argmax.dtype)
@@ -283,25 +283,39 @@ def unpool(I, locations, size):
     # return ret
 
 def get_maxpool_argmax(batch_responses, window, stride):
-    responses_loc = []
-    for i in range(batch_responses.shape[0]):
-        batch_loc = []
-        for j in range(batch_responses.shape[-1]):
-            _, resp_loc = tf.nn.max_pool_with_argmax(batch_responses[i:i+1,:,:,j:j+1], [1, window, window, 1],
-                                                     [1, stride, stride, 1], "SAME")
-            resp_loc = tf.stop_gradient(resp_loc)
-            resp_loc = tf.cast(resp_loc, tf.int32)
-            resp_loc = resp_loc[0,:,:,0]
-            sh = resp_loc.get_shape().as_list()
-            offset = sh[0]*sh[1]
-            batch_loc.append(resp_loc)
+    # responses_loc = []
+    # for i in range(batch_responses.shape[0]):
+    #     batch_loc = []
+    #     for j in range(batch_responses.shape[-1]):
+    #         _, resp_loc = tf.nn.max_pool_with_argmax(batch_responses[i:i+1,:,:,j:j+1], [1, window, window, 1],
+    #                                                  [1, stride, stride, 1], "SAME")
+    #         resp_loc = tf.stop_gradient(resp_loc)
+    #         resp_loc = tf.cast(resp_loc, tf.int32)
+    #         resp_loc = resp_loc[0,:,:,0]
+    #         sh = resp_loc.get_shape().as_list()
+    #         offset = sh[0]*sh[1]
+    #         batch_loc.append(resp_loc)
+    #
+    #     responses_loc.append(tf.stack(batch_loc, -1))
+    #
+    # batch_responses = tf.nn.max_pool(batch_responses, [1, window, window, 1],
+    #                                  [1, stride, stride, 1], padding="SAME")
+    # # print('resp', tf.stack(responses_loc, 0))
+    # return batch_responses, tf.stack(responses_loc, 0)
 
-        responses_loc.append(tf.stack(batch_loc, -1))
+    locs = []
+    for i in range(batch_responses.shape[0]):
+        _, resp_loc = tf.nn.max_pool_with_argmax(batch_responses[i:i + 1,:,:,:], [1, window, window, 1],
+                                                 [1, stride, stride, 1], "SAME")
+        resp_loc = tf.stop_gradient(resp_loc)
+        resp_loc = tf.cast(resp_loc, tf.int32)
+
+        locs.append(resp_loc[0])
 
     batch_responses = tf.nn.max_pool(batch_responses, [1, window, window, 1],
                                      [1, stride, stride, 1], padding="SAME")
     # print('resp', tf.stack(responses_loc, 0))
-    return batch_responses, tf.stack(responses_loc, 0)
+    return batch_responses, tf.stack(locs, 0)
 
 
 # def calc_sizes(old_buffers, kernels, stride, trans):

@@ -211,42 +211,42 @@ def trainAE(images, lr=LEARNING_RATE, iterations=ITERATION):
             losses.append(c)
 
             if it % 30 == 0:
-                ################################
-                bufs, locs, resp, _ = sess.run(encoder(batch, batch_size))
-                l = locs[0]
-                image, zbufs, resp1, I = sess.run(decoder((bufs, locs, resp, _)))
-                print()
-                #
-                #
-                image, _ = sess.run(reconstruct_batch(bufs, 0, 4))
-                image = tf.convert_to_tensor(image)
-                image = sess.run(unpool(image, locs[0], INPUT_SIZE))
-                # # (nbufs, image2) = sess.run(conv(NLAYER_SIZES[0], NLAYER_SIZES[1], bufs, kernels[1], encbiases[1],
-                # #                                 STRIDE[1], WINDOW[1], True, 3, 'h'))
-                # # image = sess.run(reconstruct_batch(bufs, 0, 3))[0]
-                # # image2 = sess.run(reconstruct_batch(bufs1, 0, 1))
-                # # print(images[0,:,:,0])
-                # # print(resp)
-                # # image = sess.run(unpool(reconstruct_batch(bufs, 0, 3), bufs[-1], INPUT_SIZE))
-                print(image.shape)
-                # plt.subplot(121)
-                #
-                image[image > 1] = 1
-                image[image < 0] = 0
-                # image = (image - np.min(image))
-                # image = image / np.max(image)
-                plt.imshow(image[0, :, :, 0], cmap='gray')
-                #
-                # plt.subplot(122)
-                # # image2[image2 > 1] = 1
-                # # image2[image2 < 0] = 0
-                # image2 = (image2 - np.min(image2))
-                # image2 = image2 / np.max(image2)
-                #
-                # plt.imshow(image2[0, :, :, 0], cmap='gray')
-                plt.show()
-                plt.pause(5)
-                # ###################################
+                # ################################
+                # bufs, locs, resp, _ = sess.run(encoder(batch, batch_size))
+                # l = locs[0]
+                # image, zbufs, resp1, I = sess.run(decoder((bufs, locs, resp, _)))
+                # print()
+                # #
+                # #
+                # image, _ = sess.run(reconstruct_batch(bufs, 0, 4))
+                # image = tf.convert_to_tensor(image)
+                # image = sess.run(unpool(image, locs[0], INPUT_SIZE))
+                # # # (nbufs, image2) = sess.run(conv(NLAYER_SIZES[0], NLAYER_SIZES[1], bufs, kernels[1], encbiases[1],
+                # # #                                 STRIDE[1], WINDOW[1], True, 3, 'h'))
+                # # # image = sess.run(reconstruct_batch(bufs, 0, 3))[0]
+                # # # image2 = sess.run(reconstruct_batch(bufs1, 0, 1))
+                # # # print(images[0,:,:,0])
+                # # # print(resp)
+                # # # image = sess.run(unpool(reconstruct_batch(bufs, 0, 3), bufs[-1], INPUT_SIZE))
+                # print(image.shape)
+                # # plt.subplot(121)
+                # #
+                # image[image > 1] = 1
+                # image[image < 0] = 0
+                # # image = (image - np.min(image))
+                # # image = image / np.max(image)
+                # plt.imshow(image[0, :, :, 0], cmap='gray')
+                # #
+                # # plt.subplot(122)
+                # # # image2[image2 > 1] = 1
+                # # # image2[image2 < 0] = 0
+                # # image2 = (image2 - np.min(image2))
+                # # image2 = image2 / np.max(image2)
+                # #
+                # # plt.imshow(image2[0, :, :, 0], cmap='gray')
+                # plt.show()
+                # plt.pause(5)
+                # # ###################################
 
                 save_weights(sess,kernels[0:NUM_LAYERS]+encbiases[0:NUM_LAYERS]+decbiases[0:NUM_LAYERS],"weights")
                 kers = save_kernels(sess.run(kernels[0]),"kernels/kers")

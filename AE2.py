@@ -96,7 +96,7 @@ def encoder(images, bs):
     trans = False
     layer_buffers = []
 
-    buffers, loc, resp = conv(INPUT_SIZE, NLAYER_SIZES[0], buffers, None, kernels[0], encbiases[0],
+    buffers, loc, resp, I = conv(INPUT_SIZE, NLAYER_SIZES[0], buffers, None, kernels[0], encbiases[0],
                    STRIDE[0], WINDOW[0], trans, K[0], 'Enc' + str(0))
     # layer_buffers.append(buffers)
     # print('endcoder second layer')
@@ -105,13 +105,13 @@ def encoder(images, bs):
                        STRIDE[i], WINDOW[i], trans, K[i], 'Enc'+str(i))
         # layer_buffers.append(buffers)
 
-    return buffers, [loc], resp
+    return buffers, [loc], resp, I
 
 
 def decoder(foward_buffers):
 
     trans = True
-    zbuffers, locs,_ = foward_buffers
+    zbuffers, locs,_,_ = foward_buffers
 
     for i in range(NUM_LAYERS-1, 0, -1):
         zbuffers, _, _ = conv(NLAYER_SIZES[i], NLAYER_SIZES[i-1], zbuffers, locs[i], kernels[i], decbiases[i],
@@ -121,16 +121,16 @@ def decoder(foward_buffers):
         # for j in range(batch_size):
         #     zbuffers[j] = (zbuffers[j][0], zbuffers[j][1], foward_buffers[i-1][j][2])
     # print('decoder first layer')
-    zbuffers, _, _ = conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers, locs[0], kernels[0], decbiases[0],
+    zbuffers, resp1, _, I = conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers, locs[0], kernels[0], decbiases[0],
                    STRIDE[0], WINDOW[0], trans, INPUT_CH, 'Dec0')
 
     with tf.name_scope('reconstruct'):
         image, _ = reconstruct_batch(zbuffers, 0, INPUT_CH)
-        return image
+        return image, zbuffers, resp1, I
 
 
 ae_input = tf.placeholder(tf.float32, [batch_size] + INPUT_SIZE + [INPUT_CH])
-ae_output = decoder(encoder(ae_input, batch_size))
+ae_output = decoder(encoder(ae_input, batch_size))[0]
 
 
 rsp, rsp_crd = tf.nn.max_pool_with_argmax(ae_input, [1, 2, 2, 1],
@@ -212,12 +212,15 @@ def trainAE(images, lr=LEARNING_RATE, iterations=ITERATION):
 
             if it % 30 == 0:
                 ################################
-                bufs, locs, resp = sess.run(encoder(batch, batch_size))
+                bufs, locs, resp, _ = sess.run(encoder(batch, batch_size))
                 l = locs[0]
-                image = sess.run(decoder((bufs, locs, resp)))
+                image, zbufs, resp1, I = sess.run(decoder((bufs, locs, resp, _)))
+                print()
                 #
                 #
-                # # image, _ = sess.run(reconstruct_batch(bufs, 0, 3))
+                image, _ = sess.run(reconstruct_batch(bufs, 0, 4))
+                image = tf.convert_to_tensor(image)
+                image = sess.run(unpool(image, locs[0], INPUT_SIZE))
                 # # (nbufs, image2) = sess.run(conv(NLAYER_SIZES[0], NLAYER_SIZES[1], bufs, kernels[1], encbiases[1],
                 # #                                 STRIDE[1], WINDOW[1], True, 3, 'h'))
                 # # image = sess.run(reconstruct_batch(bufs, 0, 3))[0]
@@ -225,14 +228,14 @@ def trainAE(images, lr=LEARNING_RATE, iterations=ITERATION):
                 # # print(images[0,:,:,0])
                 # # print(resp)
                 # # image = sess.run(unpool(reconstruct_batch(bufs, 0, 3), bufs[-1], INPUT_SIZE))
-                # # print(image.shape)
+                print(image.shape)
                 # plt.subplot(121)
                 #
-                # # image[image > 1] = 1
-                # # image[image < 0] = 0
+                image[image > 1] = 1
+                image[image < 0] = 0
                 # image = (image - np.min(image))
                 # image = image / np.max(image)
-                # plt.imshow(image[0, :, :, 0], cmap='gray')
+                plt.imshow(image[0, :, :, 0], cmap='gray')
                 #
                 # plt.subplot(122)
                 # # image2[image2 > 1] = 1
@@ -241,8 +244,8 @@ def trainAE(images, lr=LEARNING_RATE, iterations=ITERATION):
                 # image2 = image2 / np.max(image2)
                 #
                 # plt.imshow(image2[0, :, :, 0], cmap='gray')
-                # plt.show()
-                # plt.pause(5)
+                plt.show()
+                plt.pause(5)
                 # ###################################
 
                 save_weights(sess,kernels[0:NUM_LAYERS]+encbiases[0:NUM_LAYERS]+decbiases[0:NUM_LAYERS],"weights")

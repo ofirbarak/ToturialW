@@ -160,6 +160,7 @@ def update_buffers(buffers, responses, locations, filter_init_num, k):
     ubuffers = []
     batch_size = len(buffers)
     for i in range(batch_size):
+        # print('updbufs', locations)
         ubuffers.append(update_buf(buffers[i], responses[i], locations[i],filter_init_num, k))
 
     return ubuffers
@@ -226,10 +227,20 @@ def unpool(I, locations, size):
     input_shape = I.get_shape().as_list()
     batch = []
     for ind in range(input_shape[0]):
-        # print(len(locations[ind][2]))
-        # tensor_locations =  tf.convert_to_tensor(locations[ind][2])
-        flatten_argmax = tf.reshape(locations[ind], [-1,1])
-        flatten_maxval = tf.reshape(I[ind], [-1])
+        # flatten_argmax = tf.reshape(locations[ind], [-1,1])
+        # flatten_maxval = tf.reshape(I[ind], [-1])
+        flatten_argmax = []
+        flatten_maxval = []
+        for ch in range(input_shape[-1]):
+            flatten_argmax.append(tf.reshape(locations[ind,:,:,ch], [-1]))
+            flatten_maxval.append(tf.reshape(I[ind,:,:,ch], [-1]))
+        tensor_argmax = tf.stack(flatten_argmax, 0)
+        tensor_maxval = tf.stack(flatten_maxval, 0)
+        print(tensor_argmax, tensor_maxval)
+        flatten_argmax = tf.reshape(tensor_argmax, [-1,1])
+        flatten_maxval = tf.reshape(tensor_maxval, [-1])
+        print(flatten_argmax, flatten_maxval)
+
         # print(flatten_argmax, flatten_maxval, I)
         sh = tf.constant([1 * int(size[0]) * int(size[1]) * input_shape[-1]], dtype=flatten_argmax.dtype)
         # print(I, flatten_argmax, flatten_maxval)
@@ -274,15 +285,22 @@ def unpool(I, locations, size):
 def get_maxpool_argmax(batch_responses, window, stride):
     responses_loc = []
     for i in range(batch_responses.shape[0]):
-        _, resp_loc = tf.nn.max_pool_with_argmax(batch_responses[i:i+1,:,:,:], [1, window, window, 1],
-                                                 [1, stride, stride, 1], "SAME")
-        resp_loc = tf.stop_gradient(resp_loc)
-        resp_loc = tf.cast(resp_loc, tf.int32)
-        responses_loc.append(resp_loc[0])
+        batch_loc = []
+        for j in range(batch_responses.shape[-1]):
+            _, resp_loc = tf.nn.max_pool_with_argmax(batch_responses[i:i+1,:,:,j:j+1], [1, window, window, 1],
+                                                     [1, stride, stride, 1], "SAME")
+            resp_loc = tf.stop_gradient(resp_loc)
+            resp_loc = tf.cast(resp_loc, tf.int32)
+            resp_loc = resp_loc[0,:,:,0]
+            sh = resp_loc.get_shape().as_list()
+            offset = sh[0]*sh[1]
+            batch_loc.append(resp_loc)
+
+        responses_loc.append(tf.stack(batch_loc, -1))
 
     batch_responses = tf.nn.max_pool(batch_responses, [1, window, window, 1],
                                      [1, stride, stride, 1], padding="SAME")
-
+    # print('resp', tf.stack(responses_loc, 0))
     return batch_responses, tf.stack(responses_loc, 0)
 
 
@@ -342,6 +360,8 @@ def conv(prev_size, next_size, old_buffers, locs, kernels, biases, stride, windo
         # convolve
 
         resp_loc = None
+        I = None
+
         for j in range(0, c_o, M_O):
             batch_image_size = next_size if trans else prev_size
             batch_resp_size = [batch_size] + batch_image_size + [min(M_O, c_o - j)]
@@ -378,7 +398,7 @@ def conv(prev_size, next_size, old_buffers, locs, kernels, biases, stride, windo
             with tf.name_scope('updBufs_%dT%d' % (j, j+M_O)):
                 new_buffers = update_buffers(new_buffers, batch_responses, resp_loc, j, k)
 
-        return new_buffers, resp_loc, batch_responses
+        return new_buffers, resp_loc, batch_responses, I
 
 
 def copy_image_to_buffers(image):

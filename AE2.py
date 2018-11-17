@@ -118,8 +118,8 @@ def decoder(foward_buffers):
                         STRIDE[i], WINDOW[i], trans, K[i-1], 'Dec'+str(i))
 
         # replace buf_loc to forward buf_loc from encoder
-        # for j in range(batch_size):
-        #     zbuffers[j] = (zbuffers[j][0], zbuffers[j][1], foward_buffers[i-1][j][2])
+        for j in range(batch_size):
+            zbuffers[j] = (zbuffers[j][0], zbuffers[j][1], locs[i-1])
     # print('decoder first layer')
     zbuffers, resp1, _, I = conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers, zbuffers[0][2], kernels[0], decbiases[0],
                    STRIDE[0], WINDOW[0], trans, INPUT_CH, 'Dec0')
@@ -212,9 +212,9 @@ def trainAE(images, lr=LEARNING_RATE, iterations=ITERATION):
 
             if it % 30 == 0:
                 # ################################
-                # bufs, locs, resp, _ = sess.run(encoder(batch, batch_size))
-                # l = locs[0]
-                # image, zbufs, resp1, I = sess.run(decoder((bufs, locs, resp, _)))
+                bufs, locs, resp, _ = sess.run(encoder(batch, batch_size))
+                l = locs[0]
+                image, zbufs, resp1, I = sess.run(decoder((bufs, locs, resp, _)))
                 # print()
                 # #
                 # #

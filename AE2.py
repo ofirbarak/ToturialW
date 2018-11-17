@@ -111,6 +111,7 @@ def encoder(images, bs):
 
 
 def decoder(foward_buffers):
+
     trans = True
     zbuffers, locs = foward_buffers
 

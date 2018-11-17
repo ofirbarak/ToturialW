@@ -94,20 +94,18 @@ def encoder(images, bs):
         buffers = copy_batch_to_buffers(images, bs)
 
     trans = False
-    layer_location = []
+    layer_buffers = []
 
     buffers, loc = conv(INPUT_SIZE, NLAYER_SIZES[0], buffers, None, kernels[0], encbiases[0],
                    STRIDE[0], WINDOW[0], trans, K[0], 'Enc' + str(0))
-    layer_location.append(loc)
     # layer_buffers.append(buffers)
     # print('endcoder second layer')
     for i in range(1, NUM_LAYERS):
         buffers, loc1 = conv(NLAYER_SIZES[i-1], NLAYER_SIZES[i], buffers, None, kernels[i], encbiases[i],
                        STRIDE[i], WINDOW[i], trans, K[i], 'Enc'+str(i))
-        layer_location.append(loc)
         # layer_buffers.append(buffers)
 
-    return buffers, layer_location
+    return buffers, [loc, loc1]
 
 
 def decoder(foward_buffers):

@@ -105,7 +105,7 @@ def encoder(images, bs):
                        STRIDE[i], WINDOW[i], trans, K[i], 'Enc'+str(i))
         # layer_buffers.append(buffers)
 
-    return buffers, [loc, loc1]
+    return buffers, [loc]
 
 
 def decoder(foward_buffers):

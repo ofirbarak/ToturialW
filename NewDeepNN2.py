@@ -179,16 +179,18 @@ def reconstruct(buffers, i, m):
     tensor_buf_ind = tf.stack(buf_ind, -1)
     tensor_buf_val = tf.stack(buf_val, -1)
 
-    tensor_buf_loc = buf_loc
+    tensor_buf_loc = None
     if type(buf_loc) == list:
         tensor_buf_loc = tf.stack(buf_loc, -1)
+    else:
+        tensor_buf_loc = buf_loc
 
     for j in range(i, i + m):
         mask = tf.equal(tensor_buf_ind, tf.constant(j, dtype=tensor_buf_ind.dtype))
         mask = tf.cast(mask, tensor_buf_val.dtype)
         maskr = tf.cast(mask, tensor_buf_loc.dtype)
         I.append(tf.reduce_sum(tensor_buf_val * mask, -1))
-        relevant_loc.append(tf.reduce_sum(tensor_buf_loc * maskr, -1))
+        relevant_loc.append(tf.reduce_max(tensor_buf_loc * maskr, -1)) #todo: problem with mask
 
     return tf.expand_dims(tf.stack(I, -1), axis=0), tf.stack(relevant_loc, -1)
 
@@ -222,12 +224,27 @@ def reconstruct_batch(buffers, i, m):
 
 
 def unpool(I, locations, size):
-    # print('unpool', I, locations, size)
+    if type(locations) == list:
+        locations = tf.convert_to_tensor(locations)
+    print('unpool', locations)
     input_shape = I.get_shape().as_list()
     batch = []
     for ind in range(input_shape[0]):
         flatten_argmax = tf.reshape(locations[ind], [-1,1])
         flatten_maxval = tf.reshape(I[ind], [-1])
+
+        # flatten_argmax = []
+        # flatten_maxval = []
+        # for ch in range(input_shape[-1]):
+        #     flatten_argmax.append(tf.reshape(locations[ind, :, :, ch], [-1]))
+        #     flatten_maxval.append(tf.reshape(I[ind, :, :, ch], [-1]))
+        # tensor_argmax = tf.stack(flatten_argmax, 0)
+        # tensor_maxval = tf.stack(flatten_maxval, 0)
+        # print(tensor_argmax, tensor_maxval)
+        # flatten_argmax = tf.reshape(tensor_argmax, [-1, 1])
+        # flatten_maxval = tf.reshape(tensor_maxval, [-1])
+        # print(flatten_argmax, flatten_maxval)
+
         # print(flatten_argmax, flatten_maxval, I)
         sh = tf.constant([1 * int(size[0]) * int(size[1]) * input_shape[-1]], dtype=flatten_argmax.dtype)
         batch_maxpoollike = tf.scatter_nd(flatten_argmax, flatten_maxval, sh)
@@ -350,9 +367,11 @@ def conv(prev_size, next_size, old_buffers, locations, kernels, biases, stride, 
                 size = min(M_I, c_i.value-i)
                 with tf.name_scope('W_%dT%d_%dT%d' % (j, j + M_O, i, i + size)):
                     # print('i', i)
+                    # if trans:
+                    #     old_buffers = [(old_buffers[0][0], old_buffers[0][1], locations)]
                     I, locations1 = reconstruct_batch(old_buffers, i, size)
-
                     if trans:
+                        # print('convvv', locations1, locations, old_buffers[0][2])
                         I = unpool(I, locations1, next_size)
                         # print('I size', I)
                         conv_result = regular_conv(I, kernels[:, :, j:j + M_O, i:i + size], biases[j:j + M_O],

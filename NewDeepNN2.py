@@ -178,7 +178,10 @@ def reconstruct(buffers, i, m):
     relevant_loc = []
     tensor_buf_ind = tf.stack(buf_ind, -1)
     tensor_buf_val = tf.stack(buf_val, -1)
-    tensor_buf_loc = tf.stack(buf_loc, -1)
+
+    tensor_buf_loc = buf_loc
+    if type(buf_loc) == list:
+        tensor_buf_loc = tf.stack(buf_loc, -1)
 
     for j in range(i, i + m):
         mask = tf.equal(tensor_buf_ind, tf.constant(j, dtype=tensor_buf_ind.dtype))
@@ -199,28 +202,27 @@ def reconstruct_batch(buffers, i, m):
     :return: the reconstruct batch
     """
     batch = []
-    # batch_loc = []
+    batch_loc = []
     batch_size = len(buffers)
     for ind in range(batch_size):
         I, loc = reconstruct(buffers[ind], i, m)
         batch.append(I[0])
-        # batch_loc.append(loc)
+        batch_loc.append(loc)
 
     batch = tf.convert_to_tensor(batch)
-    # buf_loc = tf.convert_to_tensor(batch_loc)
+    buf_loc = tf.convert_to_tensor(batch_loc)
 
     # img_shape = batch.get_shape().as_list()
     # offset = img_shape[0]*img_shape[1]*img_shape[2]*img_shape[3]*i
     # print('reconstruct offest', offset)
     # offset = 0
     # print('reconstruct batch', img_shape, i, offset)
-    return batch#, buf_loc-offset
+    return batch, buf_loc
     # return batch, buf_loc #tf.maximum(buf_loc-offset, 0)
 
 
 def unpool(I, locations, size):
     # print('unpool', I, locations, size)
-
     input_shape = I.get_shape().as_list()
     batch = []
     for ind in range(input_shape[0]):
@@ -348,10 +350,10 @@ def conv(prev_size, next_size, old_buffers, locations, kernels, biases, stride, 
                 size = min(M_I, c_i.value-i)
                 with tf.name_scope('W_%dT%d_%dT%d' % (j, j + M_O, i, i + size)):
                     # print('i', i)
-                    I = reconstruct_batch(old_buffers, i, size)
+                    I, locations1 = reconstruct_batch(old_buffers, i, size)
 
                     if trans:
-                        I = unpool(I, locations, next_size)
+                        I = unpool(I, locations1, next_size)
                         # print('I size', I)
                         conv_result = regular_conv(I, kernels[:, :, j:j + M_O, i:i + size], biases[j:j + M_O],
                                                    1, batch_size, trans, next_size)

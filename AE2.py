@@ -97,13 +97,17 @@ def encoder(images, bs):
 
     buffers, I1, loc = conv(INPUT_SIZE, NLAYER_SIZES[0], buffers, None, kernels[0], encbiases[0],
                    STRIDE[0], WINDOW[0], trans, K[0], 'Enc' + str(0))
+    buf_locs = [buffers[layer][2] for layer in range(batch_size)]
     # print('endcoder second layer')
     for i in range(1, NUM_LAYERS):
         buffers1, I2, loc1 = conv(NLAYER_SIZES[i-1], NLAYER_SIZES[i], buffers, None, kernels[i], encbiases[i],
                        STRIDE[i], WINDOW[i], trans, K[i], 'Enc'+str(i))
 
-    locations = [loc]
-    return buffers, locations
+        buf1_locs = [buffers1[layer][2] for layer in range(batch_size)]
+
+    # print('lennnnn', len(buffers))
+    locations = [buffers[0][2], buffers1[0][2]]
+    return buffers1, locations
 
 
 def decoder(zbuffers):
@@ -111,15 +115,21 @@ def decoder(zbuffers):
     zbuffers, locations = zbuffers
     trans = True
 
+    zbufs = []
     for i in range(NUM_LAYERS-1, 0, -1):
         zbuffers1, I2, loc1 = conv(NLAYER_SIZES[i], NLAYER_SIZES[i-1], zbuffers, locations[i], kernels[i], decbiases[i],
                         STRIDE[i], WINDOW[i], trans, K[i-1], 'Dec'+str(i))
+
+        # print(locations[0])
+        # for layer in range(batch_size):
+        #     zbuffers1[layer] = (zbuffers1[layer][0], zbuffers1[layer][1], locations[0])
+        zbufs.append([zbuffers1[0][0], zbuffers1[0][1], locations[0]])
     # print('decoder first layer')
-    zbuffers, I1, loc= conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers, locations[0], kernels[0], decbiases[0],
+    zbuffers, I1, loc= conv(NLAYER_SIZES[0], INPUT_SIZE, zbufs, locations[0], kernels[0], decbiases[0],
                    STRIDE[0], WINDOW[0], trans, INPUT_CH, 'Dec0')
 
     with tf.name_scope('reconstruct'):
-        image = reconstruct_batch(zbuffers, 0, INPUT_CH)
+        image, _ = reconstruct_batch(zbuffers, 0, INPUT_CH)
         return image
 
 
@@ -204,7 +214,7 @@ def trainAE(images, lr=LEARNING_RATE, iterations=ITERATION):
            
             losses.append(c)
 
-            if it % 10 == 0:
+            if it % 30 == 0:
                 # ################################
                 # bufs, locations, bufs1, I1, I2, loc, loc1 = sess.run(encoder(batch, batch_size))
                 # image, _, bufs2, zloc, zloc1 = sess.run(decoder((bufs, locations, bufs1, _, _)))

@@ -189,8 +189,8 @@ def reconstruct(buffers, i, m):
         mask = tf.equal(tensor_buf_ind, tf.constant(j, dtype=tensor_buf_ind.dtype))
         mask = tf.cast(mask, tensor_buf_val.dtype)
         maskr = tf.cast(mask, tensor_buf_loc.dtype)
-        I.append(tf.reduce_max(tensor_buf_val * mask, -1))
-        relevant_loc.append(tf.reduce_max(tensor_buf_loc * maskr, -1)) #todo: problem with mask
+        I.append(tf.reduce_sum(tensor_buf_val * mask, -1))
+        relevant_loc.append(tf.reduce_sum(tensor_buf_loc * maskr, -1)) #todo: problem with mask
 
     return tf.expand_dims(tf.stack(I, -1), axis=0), tf.stack(relevant_loc, -1)
 
@@ -372,7 +372,7 @@ def conv(prev_size, next_size, old_buffers, locations, kernels, biases, stride, 
                     I, locations1 = reconstruct_batch(old_buffers, i, size)
                     if trans:
                         # print('convvv', locations1, locations, old_buffers[0][2])
-                        I = unpool(I, locations1, next_size)
+                        I = unpool(I, locations, next_size)
                         # print('I size', I)
                         conv_result = regular_conv(I, kernels[:, :, j:j + M_O, i:i + size], biases[j:j + M_O],
                                                    1, batch_size, trans, next_size)

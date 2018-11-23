@@ -94,21 +94,22 @@ def encoder(images, bs):
         buffers = copy_batch_to_buffers(images, bs)
 
     trans = False
+    locations = []
 
     buffers, _, _, loc = conv(INPUT_SIZE, NLAYER_SIZES[0], buffers, None, kernels[0], encbiases[0],
                    STRIDE[0], WINDOW[0], trans, K[0], 'Enc' + str(0))
+    locations.append(loc)
     # loc = buffers[0][2]
     # buf_locs = [buffers[layer][2] for layer in range(batch_size)]
     # print('endcoder second layer')
     for i in range(1, NUM_LAYERS):
-        buffers1, _, _, loc1 = conv(NLAYER_SIZES[i-1], NLAYER_SIZES[i], buffers, None, kernels[i], encbiases[i],
+        buffers, _, _, loc = conv(NLAYER_SIZES[i-1], NLAYER_SIZES[i], buffers, None, kernels[i], encbiases[i],
                        STRIDE[i], WINDOW[i], trans, K[i], 'Enc'+str(i))
-
+        locations.append(loc)
         # buf1_locs = [buffers1[layer][2] for layer in range(batch_size)]
 
     # print('lennnnn', len(buffers))
-    locations = [loc, loc1]
-    return buffers, locations, [buffers[0][2], buffers1[0][2]]
+    return buffers, locations, [buffers[0][2], buffers[0][2]]
 
 
 def decoder(zbuffers):
@@ -120,7 +121,7 @@ def decoder(zbuffers):
     x1,x2 = None ,None
     zbuffers1 = None
     for i in range(NUM_LAYERS-1, 0, -1):
-        zbuffers1, x1,x2, loc1 = conv(NLAYER_SIZES[i], NLAYER_SIZES[i-1], zbuffers, locations[i], kernels[i], decbiases[i],
+        zbuffers, x1,x2, loc1 = conv(NLAYER_SIZES[i], NLAYER_SIZES[i-1], zbuffers, locations[i], kernels[i], decbiases[i],
                         STRIDE[i], WINDOW[i], trans, K[i-1], 'Dec'+str(i))
 
         # print(locations[0])
@@ -128,7 +129,8 @@ def decoder(zbuffers):
         #     zbuffers1[layer] = (zbuffers1[layer][0], zbuffers1[layer][1], locations[0])
         # zbufs.append([zbuffers1[0][0], zbuffers1[0][1], locations[0]])
         print('decoder', locations[0])
-        zbuffers1[0] = zbuffers1[0][0], zbuffers1[0][1], bufs[0]
+        zbuffers[0] = zbuffers[0][0], zbuffers[0][1], locations[0]
+
     # print('decoder first layer')
     zbuffers, l, l1, _ = conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers, locations[0], kernels[0], decbiases[0],
                    STRIDE[0], WINDOW[0], trans, INPUT_CH, 'Dec0')

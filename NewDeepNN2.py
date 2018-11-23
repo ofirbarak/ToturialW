@@ -189,7 +189,7 @@ def reconstruct(buffers, i, m):
         mask = tf.equal(tensor_buf_ind, tf.constant(j, dtype=tensor_buf_ind.dtype))
         mask = tf.cast(mask, tensor_buf_val.dtype)
         maskr = tf.cast(mask, tensor_buf_loc.dtype)
-        I.append(tf.reduce_sum(tensor_buf_val * mask, -1))
+        I.append(tf.reduce_max(tensor_buf_val * mask, -1))
         relevant_loc.append(tf.reduce_max(tensor_buf_loc * maskr, -1)) #todo: problem with mask
 
     return tf.expand_dims(tf.stack(I, -1), axis=0), tf.stack(relevant_loc, -1)

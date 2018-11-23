@@ -95,20 +95,20 @@ def encoder(images, bs):
 
     trans = False
 
-    buffers, I1, loc = conv(INPUT_SIZE, NLAYER_SIZES[0], buffers, None, kernels[0], encbiases[0],
+    buffers, _, _, loc = conv(INPUT_SIZE, NLAYER_SIZES[0], buffers, None, kernels[0], encbiases[0],
                    STRIDE[0], WINDOW[0], trans, K[0], 'Enc' + str(0))
     # loc = buffers[0][2]
     # buf_locs = [buffers[layer][2] for layer in range(batch_size)]
     # print('endcoder second layer')
     for i in range(1, NUM_LAYERS):
-        buffers1, I2, loc1 = conv(NLAYER_SIZES[i-1], NLAYER_SIZES[i], buffers, None, kernels[i], encbiases[i],
+        buffers1, _, _, loc1 = conv(NLAYER_SIZES[i-1], NLAYER_SIZES[i], buffers, None, kernels[i], encbiases[i],
                        STRIDE[i], WINDOW[i], trans, K[i], 'Enc'+str(i))
 
         # buf1_locs = [buffers1[layer][2] for layer in range(batch_size)]
 
     # print('lennnnn', len(buffers))
     locations = [loc, loc1]
-    return buffers1, locations, [buffers[0][2], buffers1[0][2]]
+    return buffers, locations, [buffers[0][2], buffers1[0][2]]
 
 
 def decoder(zbuffers):
@@ -117,9 +117,10 @@ def decoder(zbuffers):
     trans = True
 
     # zbufs = []
+    x1,x2 = None ,None
     zbuffers1 = None
     for i in range(NUM_LAYERS-1, 0, -1):
-        zbuffers1, I2, loc1 = conv(NLAYER_SIZES[i], NLAYER_SIZES[i-1], zbuffers, locations[i], kernels[i], decbiases[i],
+        zbuffers1, x1,x2, loc1 = conv(NLAYER_SIZES[i], NLAYER_SIZES[i-1], zbuffers, locations[i], kernels[i], decbiases[i],
                         STRIDE[i], WINDOW[i], trans, K[i-1], 'Dec'+str(i))
 
         # print(locations[0])
@@ -129,12 +130,12 @@ def decoder(zbuffers):
         print('decoder', locations[0])
         zbuffers1[0] = zbuffers1[0][0], zbuffers1[0][1], bufs[0]
     # print('decoder first layer')
-    zbuffers, I1, loc= conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers1, locations[0], kernels[0], decbiases[0],
+    zbuffers, l, l1, _ = conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers, locations[0], kernels[0], decbiases[0],
                    STRIDE[0], WINDOW[0], trans, INPUT_CH, 'Dec0')
 
     with tf.name_scope('reconstruct'):
         image, _ = reconstruct_batch(zbuffers, 0, INPUT_CH)
-        return image, _
+        return image, l, l1, l, l1
 
 
 ae_input = tf.placeholder(tf.float32, [batch_size] + INPUT_SIZE + [INPUT_CH])
@@ -218,12 +219,12 @@ def trainAE(images, lr=LEARNING_RATE, iterations=ITERATION):
            
             losses.append(c)
 
-            if it % 30 == 0:
-                # ################################
-                # bufs, locations = sess.run(encoder(batch, batch_size))
-                # image, zbufs = sess.run(decoder((bufs, locations)))
-                # print()
-                #
+            if 1:#it % 30 == 0:
+                ################################
+                # bufs, locations, _ = sess.run(encoder(batch, batch_size))
+                # image, l, l1, x1, x2 = sess.run(decoder(encoder(batch, batch_size)))
+                # print(np.sum(x1==x2), np.sum(l==l1), np.sum(locations[0]==l), np.sum(locations[1]==x1))
+                #-----------------------------------------------------------------------
                 # # image, _ = sess.run(reconstruct_batch(bufs, 0, 3))
                 # # (nbufs, image2) = sess.run(conv(NLAYER_SIZES[0], NLAYER_SIZES[1], bufs, kernels[1], encbiases[1],
                 # #                                 STRIDE[1], WINDOW[1], True, 3, 'h'))
@@ -259,8 +260,8 @@ def trainAE(images, lr=LEARNING_RATE, iterations=ITERATION):
                 plt.plot(losses)
 
                 image = batch[0].copy()
-                image = (image - np.min(image))
-                image = image / np.max(image)
+                # image = (image - np.min(image))
+                # image = image / np.max(image)
 
                 aeimage = sess.run(ae_output, feed_dict={ae_input: batch})
                 aeimage = aeimage[0]
@@ -269,8 +270,8 @@ def trainAE(images, lr=LEARNING_RATE, iterations=ITERATION):
                 print(np.min(aeimage))
                 print(np.max(aeimage))
 
-                aeimage = (aeimage - np.min(aeimage))
-                aeimage = aeimage / np.max(aeimage)
+                # aeimage = (aeimage - np.min(aeimage))
+                # aeimage = aeimage / np.max(aeimage)
 
                 aeimage[aeimage>1]=1
                 aeimage[aeimage<0]=0

@@ -341,7 +341,7 @@ def conv(prev_size, next_size, old_buffers, locations, kernels, biases, stride, 
         new_buffers = []
         new_buffers_size = next_size #if trans else prev_size
         for i in range(batch_size):
-            buf_val = [tf.zeros(new_buffers_size) for _ in range(k)]
+            buf_val = [tf.zeros(new_buffers_size)-1 for _ in range(k)]
             buf_ind = [tf.zeros(new_buffers_size, dtype=tf.int32) for _ in range(k)]
             # buf_loc = [tf.reshape(tf.range(new_buffers_size[0]*new_buffers_size[1], dtype=tf.int32),
             #                       new_buffers_size) for _ in range(k)]
@@ -355,7 +355,7 @@ def conv(prev_size, next_size, old_buffers, locations, kernels, biases, stride, 
 
         # convolve
 
-        I = None
+        locations1 = None
         resp_loc = None
 
         for j in range(0, c_o, M_O):
@@ -366,13 +366,13 @@ def conv(prev_size, next_size, old_buffers, locations, kernels, biases, stride, 
             for i in range(0, c_i, M_I):
                 size = min(M_I, c_i.value-i)
                 with tf.name_scope('W_%dT%d_%dT%d' % (j, j + M_O, i, i + size)):
-                    # print('i', i)
+                    # print('i', i, size)
                     # if trans:
                     #     old_buffers = [(old_buffers[0][0], old_buffers[0][1], locations)]
                     I, locations1 = reconstruct_batch(old_buffers, i, size)
                     if trans:
                         # print('convvv', locations1, locations, old_buffers[0][2])
-                        I = unpool(I, locations, next_size)
+                        I = unpool(I, locations1, next_size)
                         # print('I size', I)
                         conv_result = regular_conv(I, kernels[:, :, j:j + M_O, i:i + size], biases[j:j + M_O],
                                                    1, batch_size, trans, next_size)
@@ -396,7 +396,7 @@ def conv(prev_size, next_size, old_buffers, locations, kernels, biases, stride, 
             with tf.name_scope('updBufs_%dT%d' % (j, j+M_O)):
                 new_buffers = update_buffers(new_buffers, batch_responses, resp_loc, j, k)
 
-        return new_buffers, I, resp_loc
+        return new_buffers, locations, locations1, resp_loc
 
 
 def copy_image_to_buffers(image):

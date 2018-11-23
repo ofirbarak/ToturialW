@@ -125,11 +125,11 @@ def decoder(zbuffers):
                         STRIDE[i], WINDOW[i], trans, K[i-1], 'Dec'+str(i))
 
         # print(locations[0])
-        # for layer in range(batch_size):
-        #     zbuffers1[layer] = (zbuffers1[layer][0], zbuffers1[layer][1], locations[0])
+        for layer in range(batch_size):
+            zbuffers[layer] = (zbuffers[layer][0], zbuffers[layer][1], tf.expand_dims(locations[i-1][layer], 0))
         # zbufs.append([zbuffers1[0][0], zbuffers1[0][1], locations[0]])
-        print('decoder', locations[0])
-        zbuffers[0] = zbuffers[0][0], zbuffers[0][1], locations[0]
+        # print('decoder', locations[0])
+        # zbuffers[0] = zbuffers[0][0], zbuffers[0][1], locations[0]
 
     # print('decoder first layer')
     zbuffers, l, l1, _ = conv(NLAYER_SIZES[0], INPUT_SIZE, zbuffers, locations[0], kernels[0], decbiases[0],

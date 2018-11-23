@@ -221,7 +221,7 @@ def trainAE(images, lr=LEARNING_RATE, iterations=ITERATION):
            
             losses.append(c)
 
-            if 1:#it % 30 == 0:
+            if it % 50 == 0:
                 ################################
                 # bufs, locations, _ = sess.run(encoder(batch, batch_size))
                 # image, l, l1, x1, x2 = sess.run(decoder(encoder(batch, batch_size)))

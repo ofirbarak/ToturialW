@@ -178,12 +178,11 @@ def reconstruct(buffers, i, m):
     relevant_loc = []
     tensor_buf_ind = tf.stack(buf_ind, -1)
     tensor_buf_val = tf.stack(buf_val, -1)
-
     tensor_buf_loc = None
     if type(buf_loc) == list:
         tensor_buf_loc = tf.stack(buf_loc, -1)
     else:
-        tensor_buf_loc = buf_loc
+        tensor_buf_loc = buf_loc[0]
 
     for j in range(i, i + m):
         mask = tf.equal(tensor_buf_ind, tf.constant(j, dtype=tensor_buf_ind.dtype))
@@ -211,8 +210,8 @@ def reconstruct_batch(buffers, i, m):
         batch.append(I[0])
         batch_loc.append(loc)
 
-    batch = tf.convert_to_tensor(batch)
-    buf_loc = tf.convert_to_tensor(batch_loc)
+    batch = tf.stack(batch, 0)
+    buf_loc = tf.stack(batch_loc, 0)
 
     # img_shape = batch.get_shape().as_list()
     # offset = img_shape[0]*img_shape[1]*img_shape[2]*img_shape[3]*i

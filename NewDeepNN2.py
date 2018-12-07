@@ -1,19 +1,14 @@
 from AEconstants import *
 
-K = [4, 4]  # sparse size
-M_O = 4  # output batch size, assume LAYERS modulo M_O = 0
-M_I = 4  # input batch size
-
 import tensorflow as tf
 import numpy as np
 
 
-def regular_conv(input, kernel, biases, stride, batch_size, trans=False, out_shape=None):
+def regular_conv(input, kernel, stride, batch_size, trans=False, out_shape=None):
     """
     preform regular convolution
     :param input: a 4D tensor object
     :param kernel: a 4D tensor - if trans=False [H,W,I_C,O_C], else [H,W,O_C,I_C]
-    :param biases: bias, 1D tensor
     :param s_h: stride's size - [stride, stride]
     :param padding: padding algorithm
     :param trans: if true preform conv_transpose, otherwise regular convolution
@@ -34,7 +29,7 @@ def regular_conv(input, kernel, biases, stride, batch_size, trans=False, out_sha
         conv = tf.nn.conv2d_transpose(input, kernel ,[batch_size]+out_shape+[size[-2]], [1,stride,stride,1], padding)
     else:
         conv = tf.nn.conv2d(input, kernel, [1, stride, stride, 1], padding)
-    return tf.nn.bias_add(conv, biases)
+    return conv
 
 
 def prepare_buf(buffers, k):
@@ -225,7 +220,7 @@ def reconstruct_batch(buffers, i, m):
 def unpool(I, locations, size):
     if type(locations) == list:
         locations = tf.convert_to_tensor(locations)
-    print('unpool', locations)
+    # print('unpool', locations)
     input_shape = I.get_shape().as_list()
     batch = []
     for ind in range(input_shape[0]):
@@ -317,7 +312,7 @@ def get_maxpool_argmax(batch_responses, window, stride):
 
 
 
-def conv(prev_size, next_size, old_buffers, locations, kernels, biases, stride, window, trans, k, layer_name):
+def conv(prev_size, next_size, old_buffers, locations, kernels, biases, stride, window, trans, k, layer_name, relu=True):
     """
     preform a convolution operation
     :param next_size: the next layer size, 2D array
@@ -328,6 +323,7 @@ def conv(prev_size, next_size, old_buffers, locations, kernels, biases, stride, 
     :param window: window's size - [window, window], used at max pool
     :param trans: False for regular convolution, True for transpose convolution
     :param k: next sparse size
+    :param relu: whether to apple relU or not
     :return: new buffers
     """
     with tf.name_scope(layer_name):
@@ -373,22 +369,23 @@ def conv(prev_size, next_size, old_buffers, locations, kernels, biases, stride, 
                         # print('convvv', locations1, locations, old_buffers[0][2])
                         I = unpool(I, locations1, next_size)
                         # print('I size', I)
-                        conv_result = regular_conv(I, kernels[:, :, j:j + M_O, i:i + size], biases[j:j + M_O],
+                        conv_result = regular_conv(I, kernels[:, :, j:j + M_O, i:i + size],
                                                    1, batch_size, trans, next_size)
 
                     else:
-                        conv_result = regular_conv(I, kernels[:, :, i:i + size, j:j + M_O], biases[j:j + M_O],
+                        conv_result = regular_conv(I, kernels[:, :, i:i + size, j:j + M_O],
                                                    1, batch_size, trans)
 
                     batch_responses += conv_result
 
-            I = batch_responses
+            batch_responses = tf.nn.bias_add(batch_responses,  biases[j:j + M_O])
 
             # activation
             with tf.name_scope('acti_%dT%d' % (j, j+M_O)):
                 resp_loc = tf.zeros(batch_resp_size, dtype=tf.int32)
+                if relu:
+                    batch_responses = tf.nn.relu(batch_responses)  # - 0.1 * tf.nn.relu(-batch_responses)
                 if not trans:
-                    batch_responses = tf.nn.relu(batch_responses)
                     batch_responses, resp_loc = get_maxpool_argmax(batch_responses, window, stride)
 
             # update buffers
